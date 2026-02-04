@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <link rel="icon" href="data:image/svg+xml,
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>
+  <text y='0.9em' font-size='90'>🖥️</text>
+</svg>">
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>AC Balances</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<meta name="theme-color" content="#7A5C3E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>AC Balances</title>
+
+<style>
+  :root{
+    --bg:#F3F2EF;
+    --card:#FFFFFF;
+    --text:#1C1C1C;
+    --muted:#6B6B6B;
+    --border:#E0DED8;
+
+    --primary:#7A5C3E;
+    --primarySoft:#C9B79C;
+
+    --ok:#4F6F52;
+    --warn:#8C3A2B;
+
+    --r:18px;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro", sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--text); }
+  .app{ max-width:1060px; margin:0 auto; padding:16px; }
+
+  header{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    flex-wrap:wrap; margin-bottom:12px;
+  }
+  h1{ margin:0; font-size:22px; letter-spacing:-.2px; }
+  .pill{
+    display:flex; gap:10px; align-items:center;
+    padding:10px 12px; border:1px solid var(--border); border-radius:999px; background:#fff;
+    font-weight:800;
+  }
+  .muted{ color:var(--muted); font-weight:700; }
+
+  .grid{ display:grid; gap:12px; }
+  @media (min-width: 980px){ .grid-2{ grid-template-columns: 1.1fr .9fr; } }
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--r);
+    box-shadow: 0 10px 25px rgba(15, 23, 42, .06);
+    padding:14px;
+  }
+  .titleRow{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    margin-bottom:10px;
+  }
+  .titleRow h2{ margin:0; font-size:14px; letter-spacing:.2px; }
+  .chip{
+    display:inline-flex; gap:8px; align-items:center;
+    padding:8px 12px; border-radius:999px;
+    border:1px solid var(--border); background:#FAF9F7;
+    font-size:12px; font-weight:800;
+  }
+
+  label{ display:block; font-size:12px; color:var(--muted); margin:0 0 6px; font-weight:800; }
+  input, select, button{
+    width:100%;
+    padding:12px;
+    border-radius:14px;
+    border:1px solid #D7DBEA;
+    font-size:14px;
+    outline:none;
+    background:#fff;
+  }
+  input:focus, select:focus{
+    border-color: rgba(122,92,62,.6);
+    box-shadow: 0 0 0 3px rgba(122,92,62,.12);
+  }
+  button{
+    border:none;
+    background:var(--primary);
+    color:#fff;
+    font-weight:900;
+    cursor:pointer;
+  }
+  button:hover{ background:var(--primarySoft); }
+  button.secondary{
+    background:#F4F1EA;
+    color:var(--primary);
+    border:1px solid var(--border);
+  }
+  button.danger{
+    background:#FFE9EA;
+    color:#B91C1C;
+    border:1px solid #FFD2D6;
+  }
+
+  .row{ display:grid; gap:10px; }
+  @media (min-width: 740px){
+    .row-6{ grid-template-columns: 1fr .75fr .9fr 1fr .9fr .9fr; align-items:end; }
+    .row-3{ grid-template-columns: 1fr 1fr 1fr; align-items:end; }
+    .row-2{ grid-template-columns: 1fr 1fr; align-items:end; }
+  }
+
+  .progress{ height:10px; background:#E5E7EB; border-radius:999px; overflow:hidden; }
+  .progress span{ display:block; height:100%; width:0%; background:var(--primary); }
+
+  table{ width:100%; border-collapse:collapse; }
+  th, td{ padding:10px; border-bottom:1px solid #EEF0F6; text-align:left; }
+  th{ font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+  td.num{ text-align:right; font-variant-numeric: tabular-nums; }
+  .actions{ display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+  .miniBtn{ width:auto; padding:8px 10px; border-radius:12px; font-weight:900; font-size:13px; }
+
+  .hint{ font-size:12px; color:var(--muted); font-weight:650; margin-top:8px; }
+
+  .kpis{ display:grid; gap:10px; }
+  @media (min-width: 500px){ .kpis{ grid-template-columns: 1fr 1fr; } }
+  .kpiBox{
+    border:1px solid var(--border); border-radius:16px; padding:12px; background:#FAF9F7;
+  }
+  .kpiLabel{ font-size:12px; color:var(--muted); font-weight:800; }
+  .kpiValue{ font-size:18px; font-weight:950; margin-top:4px; }
+  canvas{ width:100%; height:280px; }
+</style>
+</head>
+
+<body>
+<div class="app">
+  <header>
+    <h1>AC-Balances 📊</h1>
+    <div class="pill">
+      <span class="muted" id="rangeLabel">Mes actual</span>
+      <span>·</span>
+      <span id="total">$0</span>
+    </div>
+  </header>
+
+  <div class="grid grid-2">
+    <!-- Izquierda: carga + tabla -->
+    <section class="card">
+      <div class="titleRow">
+        <h2>Agregar gasto</h2>
+        <span class="chip" id="statusChip">Listo</span>
+      </div>
+
+      <div class="row row-6">
+        <div>
+          <label>Monto</label>
+          <input id="amount" type="number" min="0" step="0.01" placeholder="Ej: 3500" />
+        </div>
+        <div>
+          <label>Moneda</label>
+          <select id="currency">
+            <option value="ARS">$ ARS</option>
+            <option value="CLP">$ CLP</option>
+            <option value="USD">US$</option>
+          </select>
+        </div>
+        <div>
+          <label>Fecha</label>
+          <input id="date" type="date" />
+        </div>
+        <div>
+          <label>Categoría</label>
+          <select id="category">
+            <option value="🍔 Comida">🍔 Comida</option>
+            <option value="🏋️ Deporte">🏋️ Deporte</option>
+            <option value="🍻 Salidas">🍻 Salidas</option>
+            <option value="🎉 Fiestas">🎉 Fiestas</option>
+            <option value="🚕 Transporte">🚕 Transporte</option>
+            <option value="🛒 Súper">🛒 Súper</option>
+            <option value="🏠 Hogar">🏠 Hogar</option>
+            <option value="💄 Cuidado personal">💄 Cuidado personal</option>
+            <option value="🎁 Regalos">🎁 Regalos</option>
+            <option value="📦 Varios">📦 Varios</option>
+          </select>
+        </div>
+        <div>
+          <label>Método</label>
+          <select id="method">
+            <option value="Tarjeta">Tarjeta</option>
+            <option value="Efectivo">Efectivo</option>
+            <option value="Transferencia">Transferencia</option>
+            <option value="Billetera">Billetera</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button id="addBtn" type="button">Agregar</button>
+        </div>
+      </div>
+
+      <div class="row row-3" style="margin-top:10px;">
+        <div>
+          <label>Nota (opcional)</label>
+          <input id="note" placeholder="Ej: cena con amigos, gym, uber…" />
+        </div>
+        <div>
+          <label>Vista</label>
+          <select id="range">
+            <option value="month">Mes</option>
+            <option value="week">Semana</option>
+            <option value="custom">Rango</option>
+          </select>
+        </div>
+        <div>
+          <label>Presupuesto mensual</label>
+          <input id="budget" type="number" min="0" step="0.01" placeholder="Ej: 200000" />
+        </div>
+      </div>
+
+      <div class="row row-3" style="margin-top:10px;">
+        <div>
+          <label>Buscar</label>
+          <input id="search" placeholder="Nombre/nota/categoría…" />
+        </div>
+        <div>
+          <label>Filtrar categoría</label>
+          <select id="filterCat">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div>
+          <label>Ordenar</label>
+          <select id="sort">
+            <option value="date_desc">Más recientes</option>
+            <option value="date_asc">Más antiguos</option>
+            <option value="amt_desc">Mayor monto</option>
+            <option value="amt_asc">Menor monto</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row row-3" style="margin-top:10px;">
+        <button id="exportBtn" class="secondary" type="button">Exportar CSV</button>
+        <button id="clearBtn" class="danger" type="button">Borrar TODO</button>
+        <button id="demoBtn" class="secondary" type="button">Cargar demo</button>
+      </div>
+
+      <div class="hint">Se guarda automáticamente en tu navegador. Enter en “Monto” o “Nota” también agrega.</div>
+
+      <hr style="border:none; border-top:1px solid #EEF0F6; margin:14px 0;">
+
+      <div class="titleRow">
+        <h2>Movimientos</h2>
+        <span class="chip" id="countChip">0</span>
+      </div>
+
+      <div style="overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Categoría</th>
+              <th>Detalle</th>
+              <th>Método</th>
+              <th class="num">Monto</th>
+              <th class="num">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Derecha: resumen + gráfico -->
+    <aside class="card">
+      <div class="titleRow">
+        <h2>Resumen</h2>
+        <span class="chip" id="periodChip">Mes</span>
+      </div>
+
+      <div class="kpis">
+        <div class="kpiBox">
+          <div class="kpiLabel">Total del período</div>
+          <div class="kpiValue" id="kpiTotal">$0</div>
+        </div>
+        <div class="kpiBox">
+          <div class="kpiLabel">Promedio por día</div>
+          <div class="kpiValue" id="kpiAvg">$0</div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="titleRow" style="margin-bottom:8px;">
+          <h2>Presupuesto (mes)</h2>
+          <span class="chip" id="budgetChip">—</span>
+        </div>
+        <div class="progress"><span id="bar"></span></div>
+        <div id="budgetMsg" class="hint">Cargá un presupuesto mensual para ver progreso.</div>
+      </div>
+
+      <hr style="border:none; border-top:1px solid #EEF0F6; margin:14px 0;">
+
+      <div class="titleRow">
+        <h2>En qué gastaste</h2>
+        <span class="chip" id="topCatChip">—</span>
+      </div>
+
+      <canvas id="donut" width="600" height="280"></canvas>
+
+      <div id="breakdown" style="margin-top:10px; display:grid; gap:8px;"></div>
+
+      <div class="hint">Siguiente nivel: metas por categoría + sincronización (celu/compu) + reportes PDF.</div>
+    </aside>
+  </div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  const state = {
+    currency: "ARS",
+    budgetMonthly: "",
+    range: "month",
+    search: "",
+    filterCat: "",
+    sort: "date_desc",
+    tx: [] // {id, amount, date, category, note, method}
+  };
+
+  function todayISO(){
+    const d = new Date();
+    const off = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - off * 60000);
+    return local.toISOString().slice(0,10);
+  }
+
+  function load(){
+    const raw = localStorage.getItem("gastos_pro_v1");
+    if(!raw) return;
+    try{
+      const parsed = JSON.parse(raw);
+      if(parsed && Array.isArray(parsed.tx)) Object.assign(state, parsed);
+    }catch(e){}
+  }
+
+  function save(){
+    localStorage.setItem("gastos_pro_v1", JSON.stringify(state));
+  }
+
+  function symbol(){
+    return state.currency === "USD" ? "US$" : "$";
+  }
+
+  function money(n){
+    const cur = state.currency;
+    const sym = symbol();
+    const num = Number(n || 0);
+    const decimals = (cur === "CLP") ? 0 : 2;
+    const fixed = num.toFixed(decimals);
+    const parts = fixed.split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return sym + parts.join(decimals ? "," : "");
+  }
+
+  function parseDateISO(s){
+    // s = YYYY-MM-DD
+    const [y,m,d] = s.split("-").map(Number);
+    return new Date(y, m-1, d);
+  }
+
+  function startOfWeek(d){
+    const x = new Date(d);
+    const day = (x.getDay() + 6) % 7; // lunes=0
+    x.setDate(x.getDate() - day);
+    x.setHours(0,0,0,0);
+    return x;
+  }
+
+  function endOfWeek(d){
+    const s = startOfWeek(d);
+    const e = new Date(s);
+    e.setDate(e.getDate() + 6);
+    e.setHours(23,59,59,999);
+    return e;
+  }
+
+  function startOfMonth(d){
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  }
+
+  function endOfMonth(d){
+    return new Date(d.getFullYear(), d.getMonth()+1, 0, 23,59,59,999);
+  }
+
+  function getPeriod(){
+    const now = new Date();
+    const range = state.range;
+
+    if(range === "week"){
+      const s = startOfWeek(now), e = endOfWeek(now);
+      return { start:s, end:e, label:"Semana actual", chip:"Semana" };
+    }
+    if(range === "month"){
+      const s = startOfMonth(now), e = endOfMonth(now);
+      return { start:s, end:e, label:"Mes actual", chip:"Mes" };
+    }
+    // custom -> por simplicidad usamos mes actual como base (podemos agregar inputs luego)
+    const s = startOfMonth(now), e = endOfMonth(now);
+    return { start:s, end:e, label:"Rango (mes actual)", chip:"Rango" };
+  }
+
+  function inPeriod(tx, period){
+    const d = parseDateISO(tx.date);
+    return d >= period.start && d <= period.end;
+  }
+
+  function escapeHtml(s){
+    return String(s)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function getViewTx(){
+    const period = getPeriod();
+    let arr = state.tx.filter(t => inPeriod(t, period));
+
+    const q = state.search.trim().toLowerCase();
+    if(q){
+      arr = arr.filter(t =>
+        (t.note || "").toLowerCase().includes(q) ||
+        (t.category || "").toLowerCase().includes(q)
+      );
+    }
+    if(state.filterCat){
+      arr = arr.filter(t => t.category === state.filterCat);
+    }
+
+    if(state.sort === "date_desc"){
+      arr.sort((a,b)=> b.date.localeCompare(a.date));
+    } else if(state.sort === "date_asc"){
+      arr.sort((a,b)=> a.date.localeCompare(b.date));
+    } else if(state.sort === "amt_desc"){
+      arr.sort((a,b)=> Number(b.amount) - Number(a.amount));
+    } else if(state.sort === "amt_asc"){
+      arr.sort((a,b)=> Number(a.amount) - Number(b.amount));
+    }
+
+    return arr;
+  }
+
+  function computeTotals(viewTx){
+    let total = 0;
+    const byCat = new Map();
+    for(const t of viewTx){
+      const amt = Number(t.amount || 0);
+      total += amt;
+      byCat.set(t.category, (byCat.get(t.category) || 0) + amt);
+    }
+    const entries = [...byCat.entries()].sort((a,b)=> b[1]-a[1]);
+    return { total, entries };
+  }
+
+  function drawDonut(entries, total){
+    const canvas = $("donut");
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+
+    // fondo suave
+    ctx.fillStyle = "#FAF9F7";
+    ctx.fillRect(0,0,w,h);
+
+    const cx = w*0.30, cy = h*0.52;
+    const r1 = Math.min(w,h)*0.33;
+    const r0 = r1*0.60;
+
+    // si no hay datos
+    if(total <= 0 || entries.length === 0){
+      ctx.fillStyle = "#6B6B6B";
+      ctx.font = "700 18px system-ui";
+      ctx.fillText("Sin gastos en este período", w*0.08, h*0.52);
+      return;
+    }
+
+    // colores (neutrales cálidos)
+    const palette = [
+      "#7A5C3E","#C9B79C","#4F6F52","#8C3A2B",
+      "#3F3F46","#A3A3A3","#9A6D38","#6B7280"
+    ];
+
+    let start = -Math.PI/2;
+    entries.forEach(([cat, val], i)=>{
+      const frac = val / total;
+      const ang = frac * Math.PI*2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r1, start, start+ang);
+      ctx.closePath();
+      ctx.fillStyle = palette[i % palette.length];
+      ctx.fill();
+      start += ang;
+    });
+
+    // hueco
+    ctx.beginPath();
+    ctx.arc(cx, cy, r0, 0, Math.PI*2);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fill();
+
+    // texto centro
+    ctx.fillStyle = "#1C1C1C";
+    ctx.font = "900 20px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText("Total", cx, cy - 6);
+    ctx.font = "900 22px system-ui";
+    ctx.fillText(money(total), cx, cy + 22);
+    ctx.textAlign = "left";
+
+    // leyenda derecha
+    const lx = w*0.58, ly = h*0.18;
+    ctx.font = "800 13px system-ui";
+    entries.slice(0,7).forEach(([cat, val], i)=>{
+      const y = ly + i*30;
+      ctx.fillStyle = palette[i % palette.length];
+      ctx.fillRect(lx, y-10, 14, 14);
+      ctx.fillStyle = "#1C1C1C";
+      const pct = Math.round((val/total)*100);
+      ctx.fillText(`${cat} — ${pct}%`, lx+22, y+2);
+    });
+  }
+
+  function render(){
+    // sync controls
+    $("currency").value = state.currency;
+    $("budget").value = state.budgetMonthly ?? "";
+    $("range").value = state.range;
+    $("search").value = state.search;
+    $("sort").value = state.sort;
+
+    const period = getPeriod();
+    $("rangeLabel").textContent = period.label;
+    $("periodChip").textContent = period.chip;
+
+    // fill category filter options
+    const cats = [...new Set(state.tx.map(t => t.category))].sort();
+    const f = $("filterCat");
+    const current = state.filterCat;
+    f.innerHTML = `<option value="">Todas</option>` + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+    f.value = current;
+
+    const viewTx = getViewTx();
+    $("countChip").textContent = String(viewTx.length);
+
+    const { total, entries } = computeTotals(viewTx);
+
+    $("total").textContent = money(total);
+    $("kpiTotal").textContent = money(total);
+
+    // promedio por día dentro del periodo
+    const days = Math.max(1, Math.round((period.end - period.start) / (1000*60*60*24)) + 1);
+    $("kpiAvg").textContent = money(total / days);
+
+    // presupuesto mensual (siempre sobre el mes actual)
+    const budget = Number(state.budgetMonthly || 0);
+    const bar = $("bar");
+    const msg = $("budgetMsg");
+    const chip = $("statusChip");
+    const budgetChip = $("budgetChip");
+
+    if(budget > 0){
+      budgetChip.textContent = `Presupuesto: ${money(budget)}`;
+      // total del MES actual (aunque estés en semana)
+      const now = new Date();
+      const monthPeriod = { start: startOfMonth(now), end: endOfMonth(now) };
+      const monthTotal = state.tx.filter(t => inPeriod(t, monthPeriod)).reduce((a,t)=>a+Number(t.amount||0),0);
+
+      const pct = Math.min((monthTotal / budget) * 100, 100);
+      bar.style.width = pct + "%";
+      const diff = budget - monthTotal;
+
+      if(diff >= 0){
+        bar.style.background = "var(--ok)";
+        msg.className = "hint";
+        msg.style.color = "var(--ok)";
+        msg.textContent = `Mes: ${money(monthTotal)}. Te quedan ${money(diff)}.`;
+        chip.textContent = "OK";
+        chip.style.background = "rgba(79,111,82,.10)";
+        chip.style.borderColor = "rgba(79,111,82,.25)";
+        chip.style.color = "var(--ok)";
+      } else {
+        bar.style.background = "var(--warn)";
+        msg.className = "hint";
+        msg.style.color = "var(--warn)";
+        msg.textContent = `Mes: ${money(monthTotal)}. Te pasaste por ${money(Math.abs(diff))}.`;
+        chip.textContent = "Excedido";
+        chip.style.background = "rgba(140,58,43,.10)";
+        chip.style.borderColor = "rgba(140,58,43,.25)";
+        chip.style.color = "var(--warn)";
+      }
+    } else {
+      budgetChip.textContent = "Sin presupuesto";
+      bar.style.width = "0%";
+      bar.style.background = "var(--primary)";
+      msg.style.color = "var(--muted)";
+      msg.textContent = "Cargá un presupuesto mensual para ver progreso.";
+      chip.textContent = "Listo";
+      chip.style.background = "#FAF9F7";
+      chip.style.borderColor = "var(--border)";
+      chip.style.color = "var(--text)";
+    }
+
+    // top category chip
+    if(entries.length){
+      $("topCatChip").textContent = `Top: ${entries[0][0]}`;
+    } else {
+      $("topCatChip").textContent = "—";
+    }
+
+    // breakdown list
+    const breakdown = $("breakdown");
+    breakdown.innerHTML = "";
+    if(total > 0){
+      entries.forEach(([cat,val])=>{
+        const pct = Math.round((val/total)*100);
+        const div = document.createElement("div");
+        div.className = "chip";
+        div.innerHTML = `${escapeHtml(cat)}: <b>${money(val)}</b> <span class="muted">(${pct}%)</span>`;
+        breakdown.appendChild(div);
+      });
+    } else {
+      const div = document.createElement("div");
+      div.className = "chip";
+      div.textContent = "Todavía no hay gastos en este período.";
+      breakdown.appendChild(div);
+    }
+
+    // table
+    const tbody = $("tbody");
+    tbody.innerHTML = "";
+    if(viewTx.length === 0){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="6" class="muted" style="padding:14px; font-weight:800;">Sin movimientos.</td>`;
+      tbody.appendChild(tr);
+    } else {
+      for(const t of viewTx){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${t.date}</td>
+          <td>${escapeHtml(t.category)}</td>
+          <td>${escapeHtml(t.note || "—")}</td>
+          <td>${escapeHtml(t.method || "—")}</td>
+          <td class="num"><b>${money(t.amount)}</b></td>
+          <td class="num">
+            <div class="actions">
+              <button class="miniBtn secondary" type="button" data-act="edit" data-id="${t.id}">Editar</button>
+              <button class="miniBtn danger" type="button" data-act="del" data-id="${t.id}">Borrar</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    drawDonut(entries, total);
+    save();
+  }
+
+  function addTx(){
+    const amount = Number($("amount").value);
+    const date = $("date").value;
+    const category = $("category").value;
+    const note = $("note").value.trim();
+    const method = $("method").value;
+
+    if(!Number.isFinite(amount) || amount <= 0) return alert("Poné un monto válido.");
+    if(!date) return alert("Elegí una fecha.");
+
+    state.tx.unshift({ id: crypto.randomUUID(), amount, date, category, note, method });
+
+    $("amount").value = "";
+    $("note").value = "";
+    $("amount").focus();
+    render();
+  }
+
+  function delTx(id){
+    state.tx = state.tx.filter(t => t.id !== id);
+    render();
+  }
+
+  function editTx(id){
+    const t = state.tx.find(x => x.id === id);
+    if(!t) return;
+
+    const newAmount = prompt("Monto:", String(t.amount));
+    if(newAmount === null) return;
+    const newDate = prompt("Fecha (YYYY-MM-DD):", t.date);
+    if(newDate === null) return;
+    const newCat = prompt("Categoría:", t.category);
+    if(newCat === null) return;
+    const newNote = prompt("Nota:", t.note || "");
+    if(newNote === null) return;
+    const newMethod = prompt("Método:", t.method || "Tarjeta");
+    if(newMethod === null) return;
+
+    const amt = Number(newAmount);
+    if(!Number.isFinite(amt) || amt <= 0) return alert("Monto inválido.");
+
+    t.amount = amt;
+    t.date = newDate.trim();
+    t.category = (newCat.trim() || t.category);
+    t.note = newNote.trim();
+    t.method = newMethod.trim();
+
+    render();
+  }
+
+  function exportCSV(){
+    const rows = [
+      ["Moneda", state.currency],
+      ["Presupuesto mensual", state.budgetMonthly || ""],
+      [],
+      ["Fecha","Categoría","Detalle","Método","Monto"],
+      ...state.tx.map(t => [t.date, t.category, t.note || "", t.method || "", t.amount])
+    ];
+    const csv = rows.map(r => r.map(v => `"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `gastos.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function clearAll(){
+    if(!confirm("¿Borrar TODO? Esto no se puede deshacer.")) return;
+    state.tx = [];
+    render();
+  }
+
+  function loadDemo(){
+    const base = todayISO();
+    const d = parseDateISO(base);
+    const iso = (x)=> {
+      const dd = new Date(d); dd.setDate(dd.getDate()+x);
+      const off = dd.getTimezoneOffset();
+      const local = new Date(dd.getTime() - off*60000);
+      return local.toISOString().slice(0,10);
+    };
+    state.tx = [
+      {id:crypto.randomUUID(), amount:5200, date:iso(-2), category:"🍔 Comida", note:"Burger con amigos", method:"Tarjeta"},
+      {id:crypto.randomUUID(), amount:3000, date:iso(-1), category:"🚕 Transporte", note:"Uber", method:"Billetera"},
+      {id:crypto.randomUUID(), amount:12000, date:iso(-6), category:"🏋️ Deporte", note:"Gym mensual", method:"Transferencia"},
+      {id:crypto.randomUUID(), amount:8500, date:iso(-4), category:"🍻 Salidas", note:"Bar", method:"Tarjeta"},
+      {id:crypto.randomUUID(), amount:18000, date:iso(-10), category:"🛒 Súper", note:"Compra semanal", method:"Tarjeta"},
+      {id:crypto.randomUUID(), amount:7000, date:iso(-12), category:"🎉 Fiestas", note:"Entrada + bebidas", method:"Efectivo"},
+      {id:crypto.randomUUID(), amount:4200, date:iso(-3), category:"💄 Cuidado personal", note:"Peluquería", method:"Tarjeta"},
+      {id:crypto.randomUUID(), amount:2600, date:iso(-7), category:"📦 Varios", note:"Kiosco", method:"Efectivo"},
+    ];
+    render();
+  }
+
+  // Init
+  load();
+  $("date").value = todayISO();
+  $("currency").value = state.currency;
+  $("budget").value = state.budgetMonthly ?? "";
+
+  $("addBtn").addEventListener("click", addTx);
+  $("amount").addEventListener("keydown", (e)=>{ if(e.key==="Enter") addTx(); });
+  $("note").addEventListener("keydown", (e)=>{ if(e.key==="Enter") addTx(); });
+
+  $("currency").addEventListener("change", ()=>{ state.currency = $("currency").value; render(); });
+  $("budget").addEventListener("input", ()=>{ state.budgetMonthly = $("budget").value; render(); });
+
+  $("range").addEventListener("change", ()=>{ state.range = $("range").value; render(); });
+  $("search").addEventListener("input", ()=>{ state.search = $("search").value; render(); });
+  $("filterCat").addEventListener("change", ()=>{ state.filterCat = $("filterCat").value; render(); });
+  $("sort").addEventListener("change", ()=>{ state.sort = $("sort").value; render(); });
+
+  $("exportBtn").addEventListener("click", exportCSV);
+  $("clearBtn").addEventListener("click", clearAll);
+  $("demoBtn").addEventListener("click", loadDemo);
+
+  $("tbody").addEventListener("click", (e)=>{
+    const btn = e.target.closest("button");
+    if(!btn) return;
+    const act = btn.getAttribute("data-act");
+    const id = btn.getAttribute("data-id");
+    if(act === "del") delTx(id);
+    if(act === "edit") editTx(id);
+  });
+
+  render();
+</script>
+
+<script>
+  // PWA: registra service worker para cache/offline
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
+  }
+</script>
+
+</body>
+</html>
